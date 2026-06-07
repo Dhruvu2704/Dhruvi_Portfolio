@@ -8,13 +8,40 @@ export default function Contact() {
   
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate form submission
-    console.log("Form submitted", formData);
-    setFormData({ name: "", email: "", message: "" });
-    alert("Message sent successfully!");
+    setStatus("submitting");
+    
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          access_key: "2db20fc0-7b2c-4803-8d4d-6f1b137c03fe",
+          ...formData
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setStatus("success");
+        setFormData({ name: "", email: "", message: "" });
+        setTimeout(() => setStatus("idle"), 5000); // Reset after 5s
+      } else {
+        setStatus("error");
+        setErrorMessage(result.message || "Something went wrong.");
+      }
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage("Network error occurred. Please try again.");
+    }
   };
 
   return (
@@ -124,11 +151,30 @@ export default function Contact() {
               
               <button 
                 type="submit"
-                className="w-full py-4 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all duration-300 group"
+                disabled={status === "submitting"}
+                className="w-full py-4 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all duration-300 group disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Send Message
-                <FaPaperPlane className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />
+                {status === "submitting" ? "Sending..." : "Send Message"}
+                {status !== "submitting" && <FaPaperPlane className="group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" />}
               </button>
+
+              {status === "success" && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-lg bg-green-500/20 border border-green-500/50 text-green-200 text-sm text-center"
+                >
+                  Your message has been sent successfully! I'll get back to you soon.
+                </motion.div>
+              )}
+              
+              {status === "error" && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-200 text-sm text-center"
+                >
+                  {errorMessage}
+                </motion.div>
+              )}
             </form>
           </motion.div>
         </div>
